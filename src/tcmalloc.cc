@@ -1602,12 +1602,14 @@ extern "C" PERFTOOLS_DLL_DECL int tc_set_new_mode(int flag) PERFTOOLS_THROW {
 extern "C" PERFTOOLS_DLL_DECL void* tc_malloc(size_t size) PERFTOOLS_THROW {
   void* result = do_malloc_or_cpp_alloc(size);
   MallocHook::InvokeNewHook(result, size);
+  Log(kLog, __func__, __LINE__, result, size);
   return result;
 }
 
 extern "C" PERFTOOLS_DLL_DECL void tc_free(void* ptr) PERFTOOLS_THROW {
   MallocHook::InvokeDeleteHook(ptr);
   do_free(ptr);
+  Log(kLog, __func__, __LINE__, "void", ptr);
 }
 
 extern "C" PERFTOOLS_DLL_DECL void tc_free_sized(void *ptr, size_t size) PERFTOOLS_THROW {
@@ -1640,10 +1642,13 @@ extern "C" PERFTOOLS_DLL_DECL void tc_deletearray_sized(void *p, size_t size) th
 extern "C" PERFTOOLS_DLL_DECL void* tc_calloc(size_t n,
                                               size_t elem_size) PERFTOOLS_THROW {
   if (ThreadCache::IsUseEmergencyMalloc()) {
-    return tcmalloc::EmergencyCalloc(n, elem_size);
+    void* result = tcmalloc::EmergencyCalloc(n, elem_size);
+    Log(kLog, __func__, __LINE__, result, n, elem_size);
+    return result;
   }
   void* result = do_calloc(n, elem_size);
   MallocHook::InvokeNewHook(result, n * elem_size);
+  Log(kLog, __func__, __LINE__, result, n, elem_size);
   return result;
 }
 
@@ -1654,6 +1659,7 @@ TC_ALIAS(tc_free);
 {
   MallocHook::InvokeDeleteHook(ptr);
   do_free(ptr);
+  Log(kLog, __func__, __LINE__, "void", ptr);
 }
 #endif
 
@@ -1662,17 +1668,23 @@ extern "C" PERFTOOLS_DLL_DECL void* tc_realloc(void* old_ptr,
   if (old_ptr == NULL) {
     void* result = do_malloc_or_cpp_alloc(new_size);
     MallocHook::InvokeNewHook(result, new_size);
+    Log(kLog, __func__, __LINE__, result, old_ptr, new_size);
     return result;
   }
   if (new_size == 0) {
     MallocHook::InvokeDeleteHook(old_ptr);
     do_free(old_ptr);
+    Log(kLog, __func__, __LINE__, (void*)NULL, old_ptr, new_size);
     return NULL;
   }
   if (UNLIKELY(tcmalloc::IsEmergencyPtr(old_ptr))) {
-    return tcmalloc::EmergencyRealloc(old_ptr, new_size);
+    void* result = tcmalloc::EmergencyRealloc(old_ptr, new_size);
+    Log(kLog, __func__, __LINE__, result, old_ptr, new_size);
+    return result;
   }
-  return do_realloc(old_ptr, new_size);
+  void* result = do_realloc(old_ptr, new_size);
+  Log(kLog, __func__, __LINE__, result, old_ptr, new_size);
+  return result;
 }
 
 extern "C" PERFTOOLS_DLL_DECL void* tc_new(size_t size) {
@@ -1767,6 +1779,7 @@ extern "C" PERFTOOLS_DLL_DECL void* tc_memalign(size_t align,
                                                 size_t size) PERFTOOLS_THROW {
   void* result = do_memalign_or_cpp_memalign(align, size);
   MallocHook::InvokeNewHook(result, size);
+  Log(kLog, __func__, __LINE__, result, align, size);
   return result;
 }
 
@@ -1775,15 +1788,18 @@ extern "C" PERFTOOLS_DLL_DECL int tc_posix_memalign(
   if (((align % sizeof(void*)) != 0) ||
       ((align & (align - 1)) != 0) ||
       (align == 0)) {
+    Log(kLog, __func__, __LINE__, EINVAL, result_ptr, align, size);
     return EINVAL;
   }
 
   void* result = do_memalign_or_cpp_memalign(align, size);
   MallocHook::InvokeNewHook(result, size);
   if (UNLIKELY(result == NULL)) {
+    Log(kLog, __func__, __LINE__, ENOMEM, result_ptr, align, size);
     return ENOMEM;
   } else {
     *result_ptr = result;
+    Log(kLog, __func__, __LINE__, 0, result_ptr, align, size);
     return 0;
   }
 }
@@ -1795,6 +1811,7 @@ extern "C" PERFTOOLS_DLL_DECL void* tc_valloc(size_t size) PERFTOOLS_THROW {
   if (pagesize == 0) pagesize = getpagesize();
   void* result = do_memalign_or_cpp_memalign(pagesize, size);
   MallocHook::InvokeNewHook(result, size);
+  Log(kLog, __func__, __LINE__, result, size);
   return result;
 }
 
@@ -1807,15 +1824,19 @@ extern "C" PERFTOOLS_DLL_DECL void* tc_pvalloc(size_t size) PERFTOOLS_THROW {
   size = (size + pagesize - 1) & ~(pagesize - 1);
   void* result = do_memalign_or_cpp_memalign(pagesize, size);
   MallocHook::InvokeNewHook(result, size);
+  Log(kLog, __func__, __LINE__, result, size);
   return result;
 }
 
 extern "C" PERFTOOLS_DLL_DECL void tc_malloc_stats(void) PERFTOOLS_THROW {
   do_malloc_stats();
+  Log(kLog, __func__, __LINE__, "void");
 }
 
 extern "C" PERFTOOLS_DLL_DECL int tc_mallopt(int cmd, int value) PERFTOOLS_THROW {
-  return do_mallopt(cmd, value);
+  int result = do_mallopt(cmd, value);
+  Log(kLog, __func__, __LINE__, result, cmd, value);
+  return result;
 }
 
 #ifdef HAVE_STRUCT_MALLINFO
@@ -1825,7 +1846,9 @@ extern "C" PERFTOOLS_DLL_DECL struct mallinfo tc_mallinfo(void) PERFTOOLS_THROW 
 #endif
 
 extern "C" PERFTOOLS_DLL_DECL size_t tc_malloc_size(void* ptr) PERFTOOLS_THROW {
-  return MallocExtension::instance()->GetAllocatedSize(ptr);
+  size_t result = MallocExtension::instance()->GetAllocatedSize(ptr);
+  Log(kLog, __func__, __LINE__, result, ptr);
+  return result;
 }
 
 extern "C" PERFTOOLS_DLL_DECL void* tc_malloc_skip_new_handler(size_t size)  PERFTOOLS_THROW {

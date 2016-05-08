@@ -79,9 +79,9 @@ void Log(LogMode mode, const char* filename, int line,
   state.p_ = state.buf_;
   state.end_ = state.buf_ + sizeof(state.buf_);
   state.AddStr(filename, strlen(filename))
-      && state.AddStr(":", 1)
-      && state.AddNum(line, 10)
-      && state.AddStr("]", 1)
+      //&& state.AddStr(":", 1)
+      //&& state.AddNum(line, 10)
+      //&& state.AddStr("]", 1)
       && state.Add(a)
       && state.Add(b)
       && state.Add(c)
